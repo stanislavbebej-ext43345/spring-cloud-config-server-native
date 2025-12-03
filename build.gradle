@@ -1,0 +1,65 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.3.13'
+	id 'io.spring.dependency-management' version '1.1.7'
+    id 'org.graalvm.buildtools.native' version '0.11.3' apply false
+}
+
+if (project.hasProperty("native")) {
+    apply plugin: 'org.graalvm.buildtools.native'
+}
+
+group = 'eu.aconic'
+version = '4.1.7'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation "org.springframework.cloud:spring-cloud-config-server:${project.version}"
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+dependencyManagement {
+	imports {
+		mavenBom 'org.springframework.cloud:spring-cloud-dependencies:2023.0.6'
+	}
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+tasks.named("bootBuildImage") {
+	applicationDirectory = "/opt/spring-cloud-config-server"
+	builder = "paketobuildpacks/builder-noble-java-tiny"
+	createdDate = "now"
+	imageName = "aconic/spring-cloud-config-server:${project.version}"
+
+    environment["BP_SPRING_CLOUD_BINDINGS_DISABLED"] = "true"
+
+    if ( ! System.getenv('CI')) {
+        docker {
+        	host = System.getenv('DOCKER_HOST')
+        	bindHostToBuilder = true
+        }
+
+        environment["HTTPS_PROXY"] = System.getenv('HTTPS_PROXY')
+    	environment["NO_PROXY"] = System.getenv('NO_PROXY')
+    }
+
+    if (project.hasProperty("native")) {
+        environment["BP_BINARY_COMPRESSION_METHOD"] = "upx"
+        environment["BP_NATIVE_IMAGE_BUILD_ARGUMENTS"] = '-H:-AddAllFileSystemProviders --strict-image-heap --initialize-at-build-time=org.bouncycastle --initialize-at-build-time=net.i2p.crypto.eddsa.EdDSASecurityProvider --initialize-at-run-time=org.bouncycastle.jcajce.provider.drbg.DRBG$Default --initialize-at-run-time=org.bouncycastle.jcajce.provider.drbg.DRBG$NonceAndIV -march=compatibility'
+        environment["BP_NATIVE_IMAGE"] = "true"
+    }
+}

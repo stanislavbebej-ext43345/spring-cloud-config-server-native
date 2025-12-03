@@ -1,0 +1,14 @@
+# https://github.com/spring-cloud/spring-cloud-config/issues/2327
+annotations:
+  default:
+    app.acme.com/source: https://github.com/acme/sample-app
+  double:
+    "app.acme.com/source": https://github.com/acme/sample-app
+  single:
+    'app.acme.com/source': https://github.com/acme/sample-app
+  doubleBracket:
+    "[app.acme.com/source]": https://github.com/acme/sample-app
+  singleBracket:
+    '[app.acme.com/source]': https://github.com/acme/sample-app
+  hack:
+    app${x-dot}acme${x-dot}com/source: https://github.com/acme/sample-app

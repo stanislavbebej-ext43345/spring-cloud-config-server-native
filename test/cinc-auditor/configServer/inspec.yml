@@ -1,0 +1,14 @@
+name: configServer
+title: Config Server
+maintainer: Stanislav Bebej
+copyright: The Authors
+copyright_email: stanislav.bebej@gmail.com
+license: Apache-2.0
+summary: An InSpec Compliance Profile
+version: 0.1.0
+supports:
+  platform: os
+inputs:
+- name: url
+  type: String
+  value: http://localhost:8888

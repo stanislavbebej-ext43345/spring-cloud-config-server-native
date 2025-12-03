@@ -1,0 +1,160 @@
+name: Build
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - build.gradle
+  push:
+    branches:
+      - main
+    tags:
+      - v[0-9]+.[0-9]+.[0-9]+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE_REGISTRY: sbebej/spring-cloud-config-server-native
+
+jobs:
+  build:
+    name: ${{ matrix.native && 'build-native' || 'build' }}
+    outputs:
+      savedImage: ${{ steps.save.outputs.image }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        native: [true, false]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Login to Docker Hub
+        if: github.ref_type == 'tag'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Build with Gradle
+        id: build
+        run: |
+          IMAGE_NAME="${IMAGE_REGISTRY}:0.0.0-${GITHUB_SHA::8}"
+          ./gradlew bootBuildImage --no-daemon $BUILD_NATIVE --imageName $IMAGE_NAME
+          echo "image=$IMAGE_NAME" >>"$GITHUB_OUTPUT"
+        env:
+          BUILD_NATIVE: ${{ matrix.native && '-Pnative' || '' }}
+
+      - name: Save image
+        id: save
+        run: |
+          # Log in to registry
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+
+          docker tag $IMAGE_NAME $TEST_IMAGE_NAME
+          docker push $TEST_IMAGE_NAME
+
+          echo "image=$TEST_IMAGE_NAME" >>"$GITHUB_OUTPUT"
+        env:
+          IMAGE_NAME: ${{ steps.build.outputs.image }}
+          TEST_IMAGE_NAME: ${{ format('ghcr.io/{0}:{1}', github.repository, matrix.native && 'latest-native' || 'latest') }}
+
+      - name: Publish image
+        if: github.ref_type == 'tag'
+        run: |
+          [[ "$RUNNER_DEBUG" == "1" ]] && set -x
+
+          SHA="${GITHUB_SHA::8}"
+          SEMVER="${GITHUB_REF_NAME:1}"
+          SEMVER_MINOR="${SEMVER%.*}"
+          SEMVER_MAJOR="${SEMVER%%.*}"
+
+          TAGS=("$SEMVER_MAJOR" "$SEMVER_MINOR" "$SEMVER" "${SEMVER}-${SHA}")
+
+          for TAG in "${TAGS[@]}"; do
+            [[ "$BUILD_NATIVE" == "true" ]] && TAG="${TAG}-native"
+            docker tag $IMAGE_NAME ${IMAGE_REGISTRY}:$TAG
+            docker push ${IMAGE_REGISTRY}:$TAG
+          done
+        env:
+          IMAGE_NAME: ${{ steps.build.outputs.image }}
+          BUILD_NATIVE: ${{ matrix.native }}
+
+  test:
+    name: ${{ matrix.native && 'test-native' || 'test' }}
+    needs: build
+    runs-on: ubuntu-latest
+    services:
+      configServer:
+        env:
+          ENCRYPT_KEY: ${{ github.sha }}
+          LOGGING_LEVEL_ROOT: INFO
+          SPRING_APPLICATION_JSON: >-
+            {
+              "spring.cloud.config.server": {
+                "native": {
+                  "searchLocations": "file:/config/configServer,file:/config/configServer/{application},file:/config/configServer/{label},file:/config/configServer/{label}/{application}"
+                },
+                "overrides": {
+                  "x-github": {
+                    "refName": "${{ github.ref_name }}",
+                    "refType": "${{ github.ref_type }}",
+                    "repository": "${{ github.repository }}",
+                    "runId": "${{ github.run_id }}",
+                    "sha": "${{ github.sha }}",
+                    "vars": {
+                      "dockerUsername": "${{ vars.DOCKERHUB_USERNAME }}"
+                    }
+                  }
+                }
+              }
+            }
+        image: ${{ format('ghcr.io/{0}:{1}', github.repository, matrix.native && 'latest-native' || 'latest') }}
+        ports:
+          - "8888:8888"
+        volumes:
+          - ${{ github.workspace }}:/config
+    strategy:
+      fail-fast: false
+      matrix:
+        native: [true, false]
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Wait for service container
+        run: |
+          until curl -sSf localhost:8888/actuator >/dev/null; do sleep 2; done
+        env:
+          CONTAINER_ID: ${{ job.services.configServer.id }}
+
+      - name: Install CINC Auditor
+        run: |
+          curl -L https://omnitruck.cinc.sh/install.sh | sudo bash -s -- -P cinc-auditor -v 6
+
+      - name: Run CINC Auditor
+        run: |
+          # Disable 'issue-*' controls
+          cinc-auditor exec test/cinc-auditor/configServer --controls='/^(?!issue-\d+).+$/'
+
+      - name: Check GitHub Issues
+        continue-on-error: true
+        run: |
+          # Run 'issue-*' controls
+          cinc-auditor exec test/cinc-auditor/configServer --controls='/^(?:issue-\d+).+$/'
