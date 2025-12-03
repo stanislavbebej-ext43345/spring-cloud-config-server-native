@@ -1,0 +1,24 @@
+@apiDataFormat = yml
+@application = application
+@configServerUri = http://localhost:8888
+@label = default
+@profile = prod
+
+### Health
+GET {{configServerUri}}/actuator/health
+
+### Data
+GET {{configServerUri}}/{{label}}/{{application}}-{{profile}}.{{apiDataFormat}}
+
+### Static file
+@cfgFile = application.yml
+GET {{configServerUri}}/{{application}}/{{profile}}/{{label}}/{{cfgFile}}
+
+### Property source
+GET {{configServerUri}}/{{application}}/{{profile}}/{{label}}
+
+### Encrypt data
+POST {{configServerUri}}/encrypt
+Content-Type: text/plain
+
+samplePassword
