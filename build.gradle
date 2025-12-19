@@ -59,7 +59,7 @@ tasks.named("bootBuildImage") {
 
     if (project.hasProperty("native")) {
         environment["BP_BINARY_COMPRESSION_METHOD"] = "upx"
-        environment["BP_NATIVE_IMAGE_BUILD_ARGUMENTS"] = '-H:-AddAllFileSystemProviders --strict-image-heap --initialize-at-build-time=org.bouncycastle --initialize-at-build-time=net.i2p.crypto.eddsa.EdDSASecurityProvider --initialize-at-run-time=org.bouncycastle.jcajce.provider.drbg.DRBG$Default --initialize-at-run-time=org.bouncycastle.jcajce.provider.drbg.DRBG$NonceAndIV -march=compatibility'
+        environment["BP_NATIVE_IMAGE_BUILD_ARGUMENTS"] = '-H:-AddAllFileSystemProviders --strict-image-heap --initialize-at-build-time=org.bouncycastle,net.i2p.crypto.eddsa.EdDSASecurityProvider --initialize-at-run-time=org.bouncycastle.jcajce.provider.drbg.DRBG$Default,org.bouncycastle.jcajce.provider.drbg.DRBG$NonceAndIV -march=x86-64-v2 --gc=parallel'
         environment["BP_NATIVE_IMAGE"] = "true"
     }
 }
