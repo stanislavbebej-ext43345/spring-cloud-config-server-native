@@ -1,8 +1,8 @@
 plugins {
 	id 'java'
-	id 'org.springframework.boot' version '3.3.13'
+	id 'org.springframework.boot' version '4.0.2'
 	id 'io.spring.dependency-management' version '1.1.7'
-    id 'org.graalvm.buildtools.native' version '0.11.3' apply false
+    id 'org.graalvm.buildtools.native' version '0.11.4' apply false
 }
 
 if (project.hasProperty("native")) {
@@ -10,11 +10,11 @@ if (project.hasProperty("native")) {
 }
 
 group = 'eu.aconic'
-version = '4.1.7'
+version = '5.0.0'
 
 java {
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(21)
+		languageVersion = JavaLanguageVersion.of(25)
 	}
 }
 
@@ -31,7 +31,7 @@ dependencies {
 
 dependencyManagement {
 	imports {
-		mavenBom 'org.springframework.cloud:spring-cloud-dependencies:2023.0.6'
+		mavenBom 'org.springframework.cloud:spring-cloud-dependencies:2025.1.0'
 	}
 }
 

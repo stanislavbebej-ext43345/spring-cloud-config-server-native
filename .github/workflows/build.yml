@@ -13,12 +13,14 @@ on:
       - v[0-9]+.[0-9]+.[0-9]+
   workflow_dispatch:
 
-permissions:
-  contents: read
-  packages: write
+concurrency: ${{ github.workflow }}-${{ github.base_ref || github.ref }}
 
 env:
   IMAGE_REGISTRY: sbebej/spring-cloud-config-server-native
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
   build:
@@ -45,7 +47,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: 21
+          java-version: 25
           cache: gradle
 
       - name: Setup Gradle
@@ -148,13 +150,13 @@ jobs:
         run: |
           curl -L https://omnitruck.cinc.sh/install.sh | sudo bash -s -- -P cinc-auditor -v 6
 
-      - name: Run CINC Auditor
-        run: |
-          # Disable 'issue-*' controls
-          cinc-auditor exec test/cinc-auditor/configServer --controls='/^(?!issue-\d+).+$/'
-
       - name: Check GitHub Issues
         continue-on-error: true
         run: |
           # Run 'issue-*' controls
           cinc-auditor exec test/cinc-auditor/configServer --controls='/^(?:issue-\d+).+$/'
+
+      - name: Run CINC Auditor
+        run: |
+          # Disable 'issue-*' controls
+          cinc-auditor exec test/cinc-auditor/configServer --controls='/^(?!issue-\d+).+$/'
