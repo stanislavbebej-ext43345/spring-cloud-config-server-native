@@ -10,7 +10,7 @@ if (project.hasProperty("native")) {
 }
 
 group = 'eu.aconic'
-version = '5.0.0'
+version = '5.0.1'
 
 java {
 	toolchain {
@@ -31,7 +31,7 @@ dependencies {
 
 dependencyManagement {
 	imports {
-		mavenBom 'org.springframework.cloud:spring-cloud-dependencies:2025.1.0'
+		mavenBom 'org.springframework.cloud:spring-cloud-dependencies:2025.1.1'
 	}
 }
 
