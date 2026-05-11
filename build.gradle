@@ -41,9 +41,10 @@ tasks.named('test') {
 
 tasks.named("bootBuildImage") {
 	applicationDirectory = "/opt/spring-cloud-config-server"
-	builder = "paketobuildpacks/builder-noble-java-tiny"
 	createdDate = "now"
 	imageName = "aconic/spring-cloud-config-server:${project.version}"
+    builder = "paketobuildpacks/ubuntu-noble-builder"
+    runImage = "paketobuildpacks/ubuntu-noble-run-tiny"
 
     environment["BP_SPRING_CLOUD_BINDINGS_DISABLED"] = "true"
 
@@ -59,7 +60,7 @@ tasks.named("bootBuildImage") {
 
     if (project.hasProperty("native")) {
         environment["BP_BINARY_COMPRESSION_METHOD"] = "upx"
-        environment["BP_NATIVE_IMAGE_BUILD_ARGUMENTS"] = '-H:-AddAllFileSystemProviders --strict-image-heap --initialize-at-build-time=org.bouncycastle,net.i2p.crypto.eddsa.EdDSASecurityProvider --initialize-at-run-time=org.bouncycastle.jcajce.provider.drbg.DRBG$Default,org.bouncycastle.jcajce.provider.drbg.DRBG$NonceAndIV -march=x86-64-v2 --gc=parallel'
+        environment["BP_NATIVE_IMAGE_BUILD_ARGUMENTS"] = '-H:-AddAllFileSystemProviders --initialize-at-build-time=org.bouncycastle,net.i2p.crypto.eddsa.EdDSASecurityProvider --initialize-at-run-time=org.bouncycastle.jcajce.provider.drbg.DRBG$Default,org.bouncycastle.jcajce.provider.drbg.DRBG$NonceAndIV -march=x86-64-v2 --gc=parallel'
         environment["BP_NATIVE_IMAGE"] = "true"
     }
 }
