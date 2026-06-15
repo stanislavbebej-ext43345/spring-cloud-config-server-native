@@ -1,16 +1,6 @@
 name: Build
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - build.gradle
-  push:
-    branches:
-      - main
-    tags:
-      - v[0-9]+.[0-9]+.[0-9]+
   workflow_dispatch:
 
 concurrency: ${{ github.workflow }}-${{ github.base_ref || github.ref }}
