@@ -12,3 +12,5 @@ annotations:
     '[app.acme.com/source]': https://github.com/acme/sample-app
   hack:
     app${x-dot}acme${x-dot}com/source: https://github.com/acme/sample-app
+# Property source: "annotations.hack.app${x-dot}acme${x-dot}com/source"
+dotted-reference: ${annotations.hack.app${:$}{x-dot}acme${:$}{x-dot}com/source}

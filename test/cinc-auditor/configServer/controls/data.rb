@@ -39,3 +39,7 @@ describe.one do
     its(['annotations', 'singleBracket', acme_key]) { should cmp acme_value }
   end
 end
+
+describe yaml(content: http_response.body) do
+  its(['dotted-reference']) { should cmp acme_value }
+end
