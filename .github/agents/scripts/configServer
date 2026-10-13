@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+CFGSRV_IMAGE="${1:-sbebej/spring-cloud-config-server-native:4.1.7-2-3bf4fc8a-native}"
+
+# Function to handle errors and display usage
+doFail() {
+	echo "error: $1" >&2
+	exit 1
+}
+
+git status &>/dev/null || doFail "not a git repository or git not installed"
+
+GITHUB_REF_NAME="$(git branch --show-current 2>/dev/null)"
+GITHUB_REF_TYPE="branch"
+GITHUB_REPOSITORY="$(git config --get remote.origin.url | awk -F ':' '{print $2}' | sed 's/\.git$//')"
+GITHUB_RUN_ID=1234567890
+GITHUB_SHA="$(git rev-parse HEAD 2>/dev/null)"
+
+JSON=$(
+	jq -c <<EOL
+{
+  "spring.cloud.config.server": {
+    "native": {
+      "searchLocations": "file:/config/configServer,file:/config/configServer/{application},file:/config/configServer/{label},file:/config/configServer/{label}/{application}"
+    },
+    "overrides": {
+      "x-github": {
+        "refName": "$GITHUB_REF_NAME",
+        "refType": "$GITHUB_REF_TYPE",
+        "repository": "$GITHUB_REPOSITORY",
+        "runId": "$GITHUB_RUN_ID",
+        "sha": "$GITHUB_SHA"
+      }
+    }
+  }
+}
+EOL
+)
+
+podman run -it --rm \
+	-p 8888:8888 \
+	-v "$(pwd)":/config:Z \
+	-e ENCRYPT_KEY=default123 \
+	-e LOGGING_LEVEL_ROOT=INFO \
+	-e JAVA_OPTS="-Dspring.profiles.active=native" \
+	-e SPRING_APPLICATION_JSON=$JSON \
+	--name configServer \
+  "$CFGSRV_IMAGE"

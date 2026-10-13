@@ -55,11 +55,47 @@ jobs:
         with:
           cache-disabled: true
 
+      - name: Checkout Spring Boot
+        uses: actions/checkout@v7
+        with:
+          repository: spring-projects/spring-boot
+          ref: v4.1.1
+          path: .spring-boot-local
+          persist-credentials: false
+
+      - name: Patch Spring Boot
+        working-directory: .spring-boot-local
+        run: |
+          git apply --ignore-whitespace ${GITHUB_WORKSPACE}/workaround/issue-2746/v4.1.1.patch
+
+      - name: Publish patched Spring Boot to Maven Local
+        working-directory: .spring-boot-local
+        run: |
+          ./gradlew :core:spring-boot:publishToMavenLocal --no-daemon
+
+      - name: Configure Spring Boot dependency override
+        run: |
+          cat > "$RUNNER_TEMP/local-spring-boot.init.gradle" <<'EOF'
+          allprojects {
+              repositories {
+                  exclusiveContent {
+                      forRepository {
+                          mavenLocal()
+                      }
+                      filter {
+                          includeModule('org.springframework.boot', 'spring-boot')
+                      }
+                  }
+              }
+          }
+          EOF
+
       - name: Build with Gradle
         id: build
         run: |
           IMAGE_NAME="${IMAGE_REGISTRY}:0.0.0-${GITHUB_SHA::8}"
-          ./gradlew bootBuildImage --no-daemon $BUILD_NATIVE --imageName $IMAGE_NAME
+          ./gradlew -I "$RUNNER_TEMP/local-spring-boot.init.gradle" \
+            --refresh-dependencies clean bootBuildImage --no-daemon $BUILD_NATIVE --imageName $IMAGE_NAME
           echo "image=$IMAGE_NAME" >>"$GITHUB_OUTPUT"
         env:
           BUILD_NATIVE: ${{ matrix.native && '-Pnative' || '' }}

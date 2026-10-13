@@ -1,0 +1,10 @@
+diff --git a/core/spring-boot/src/main/java/org/springframework/boot/env/OriginTrackedYamlLoader.java b/core/spring-boot/src/main/java/org/springframework/boot/env/OriginTrackedYamlLoader.java
+--- a/core/spring-boot/src/main/java/org/springframework/boot/env/OriginTrackedYamlLoader.java
++++ b/core/spring-boot/src/main/java/org/springframework/boot/env/OriginTrackedYamlLoader.java
+@@ -108,5 +108,5 @@
+        protected Object constructObject(Node node) {
+          if (node instanceof SequenceNode sequenceNode && sequenceNode.getValue().isEmpty()) {
+-				return constructTrackedObject(node, "");
++				return constructTrackedObject(node, List.of());
+          }
+          if (node instanceof ScalarNode) {
