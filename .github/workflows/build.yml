@@ -73,7 +73,25 @@ jobs:
         run: |
           ./gradlew :core:spring-boot:publishToMavenLocal --no-daemon
 
-      - name: Configure Spring Boot dependency override
+      - name: Checkout Spring Cloud Config
+        uses: actions/checkout@v7
+        with:
+          repository: spring-cloud/spring-cloud-config
+          ref: v5.0.5
+          path: .spring-cloud-config-local
+          persist-credentials: false
+
+      - name: Patch Spring Cloud Config
+        working-directory: .spring-cloud-config-local
+        run: |
+          git apply --ignore-whitespace ${GITHUB_WORKSPACE}/workaround/issue-2327/v5.0.5.patch
+
+      - name: Publish patched Spring Cloud Config to Maven Local
+        working-directory: .spring-cloud-config-local
+        run: |
+          ./mvnw --batch-mode --no-transfer-progress -pl spring-cloud-config-server -am -DskipTests install
+
+      - name: Configure patched dependency overrides
         run: |
           cat > "$RUNNER_TEMP/local-spring-boot.init.gradle" <<'EOF'
           allprojects {
@@ -84,6 +102,7 @@ jobs:
                       }
                       filter {
                           includeModule('org.springframework.boot', 'spring-boot')
+                          includeModule('org.springframework.cloud', 'spring-cloud-config-server')
                       }
                   }
               }
