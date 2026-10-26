@@ -17,6 +17,7 @@ on:
 concurrency: ${{ github.workflow }}-${{ github.base_ref || github.ref }}
 
 env:
+  APPLY_LOCAL_PATCH: true
   IMAGE_REGISTRY: sbebej/spring-cloud-config-server-native
 
 permissions:
@@ -57,42 +58,49 @@ jobs:
           cache-disabled: true
 
       - name: Checkout Spring Boot
+        if: fromJson(env.APPLY_LOCAL_PATCH)
         uses: actions/checkout@v7
         with:
           repository: spring-projects/spring-boot
-          ref: v4.1.1
+          ref: v4.1.2
           path: .spring-boot-local
           persist-credentials: false
 
       - name: Patch Spring Boot
+        if: fromJson(env.APPLY_LOCAL_PATCH)
         working-directory: .spring-boot-local
         run: |
-          git apply --ignore-whitespace ${GITHUB_WORKSPACE}/workaround/issue-2746/v4.1.1.patch
+          git apply --ignore-whitespace ${GITHUB_WORKSPACE}/workaround/issue-2746/v4.1.2.patch
 
       - name: Publish patched Spring Boot to Maven Local
+        if: fromJson(env.APPLY_LOCAL_PATCH)
         working-directory: .spring-boot-local
         run: |
           ./gradlew :core:spring-boot:publishToMavenLocal --no-daemon
 
       - name: Checkout Spring Cloud Config
+        if: fromJson(env.APPLY_LOCAL_PATCH)
         uses: actions/checkout@v7
         with:
           repository: spring-cloud/spring-cloud-config
-          ref: v5.0.5
+          ref: v5.0.6
           path: .spring-cloud-config-local
           persist-credentials: false
 
       - name: Patch Spring Cloud Config
+        if: fromJson(env.APPLY_LOCAL_PATCH)
         working-directory: .spring-cloud-config-local
         run: |
-          git apply --ignore-whitespace ${GITHUB_WORKSPACE}/workaround/issue-2327/v5.0.5.patch
+          git apply --ignore-whitespace ${GITHUB_WORKSPACE}/workaround/issue-2327/v5.0.6.patch
 
       - name: Publish patched Spring Cloud Config to Maven Local
+        if: fromJson(env.APPLY_LOCAL_PATCH)
         working-directory: .spring-cloud-config-local
         run: |
           ./mvnw --batch-mode --no-transfer-progress -pl spring-cloud-config-server -am -DskipTests install
 
       - name: Configure patched dependency overrides
+        if: fromJson(env.APPLY_LOCAL_PATCH)
         run: |
           cat > "$RUNNER_TEMP/local-spring-boot.init.gradle" <<'EOF'
           allprojects {
@@ -113,6 +121,8 @@ jobs:
       - name: Build with Gradle
         id: build
         run: |
+          touch "$RUNNER_TEMP/local-spring-boot.init.gradle"
+
           IMAGE_NAME="${IMAGE_REGISTRY}:0.0.0-${GITHUB_SHA::8}"
           ./gradlew -I "$RUNNER_TEMP/local-spring-boot.init.gradle" \
             --refresh-dependencies clean bootBuildImage --no-daemon $BUILD_NATIVE --imageName $IMAGE_NAME
