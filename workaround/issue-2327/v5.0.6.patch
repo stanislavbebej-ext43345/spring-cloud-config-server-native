@@ -1,0 +1,22 @@
+diff --git a/spring-cloud-config-server/src/main/java/org/springframework/cloud/config/server/support/EnvironmentPropertySource.java b/spring-cloud-config-server/src/main/java/org/springframework/cloud/config/server/support/EnvironmentPropertySource.java
+index dc03af3..4aa1c04 100644
+--- a/spring-cloud-config-server/src/main/java/org/springframework/cloud/config/server/support/EnvironmentPropertySource.java
++++ b/spring-cloud-config-server/src/main/java/org/springframework/cloud/config/server/support/EnvironmentPropertySource.java
+@@ -75,7 +75,7 @@ public class EnvironmentPropertySource extends PropertySource<Environment> {
+ 	public static Map<String, Object> resolveMapPlaceholders(StandardEnvironment env, Map<String, Object> map) {
+ 		Map<String, Object> resolved = new LinkedHashMap<>();
+ 		for (Map.Entry<String, Object> entry : map.entrySet()) {
+-			resolved.put(entry.getKey(), resolveValue(env, entry.getValue()));
++			resolved.put(resolveStringValue(env, entry.getKey()), resolveValue(env, entry.getValue()));
+ 		}
+ 		return resolved;
+ 	}
+@@ -88,7 +88,7 @@ public class EnvironmentPropertySource extends PropertySource<Environment> {
+ 			Map<String, Object> mapValue = (Map<String, Object>) value;
+ 			Map<String, Object> resolved = new LinkedHashMap<>();
+ 			for (Map.Entry<String, Object> entry : mapValue.entrySet()) {
+-				resolved.put(entry.getKey(), resolveValue(env, entry.getValue()));
++				resolved.put(resolveStringValue(env, entry.getKey()), resolveValue(env, entry.getValue()));
+ 			}
+ 			return resolved;
+ 		}
