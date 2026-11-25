@@ -17,7 +17,7 @@ on:
 concurrency: ${{ github.workflow }}-${{ github.base_ref || github.ref }}
 
 env:
-  APPLY_LOCAL_PATCH: true
+  APPLY_LOCAL_PATCH: false
   IMAGE_REGISTRY: sbebej/spring-cloud-config-server-native
 
 permissions:
