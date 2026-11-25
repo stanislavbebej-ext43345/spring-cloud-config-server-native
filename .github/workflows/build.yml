@@ -57,12 +57,22 @@ jobs:
         with:
           cache-disabled: true
 
+      - name: Extract version
+        if: fromJson(env.APPLY_LOCAL_PATCH)
+        id: extract-version
+        run: |
+          BOOT_VERSION=$(grep -oP "^\s*id\s+'org\.springframework\.boot'\s+version\s+'\K[^']+(?=')" build.gradle)
+          echo "boot=${BOOT_VERSION:-0.0.0}" >>"$GITHUB_OUTPUT"
+
+          CONFIG_VERSION=$(grep -oP "^version\s+=\s+'\K[^']+(?=')" build.gradle)
+          echo "config=${CONFIG_VERSION:-0.0.0}" >>"$GITHUB_OUTPUT"
+
       - name: Checkout Spring Boot
         if: fromJson(env.APPLY_LOCAL_PATCH)
         uses: actions/checkout@v7
         with:
           repository: spring-projects/spring-boot
-          ref: v4.1.2
+          ref: ${{ format('v{0}', steps.extract-version.outputs.boot) }}
           path: .spring-boot-local
           persist-credentials: false
 
@@ -70,7 +80,7 @@ jobs:
         if: fromJson(env.APPLY_LOCAL_PATCH)
         working-directory: .spring-boot-local
         run: |
-          git apply --ignore-whitespace ${GITHUB_WORKSPACE}/workaround/issue-2746/v4.1.2.patch
+          git apply --ignore-whitespace ${GITHUB_WORKSPACE}/workaround/issue-2746/v4.1.2.patch && git diff
 
       - name: Publish patched Spring Boot to Maven Local
         if: fromJson(env.APPLY_LOCAL_PATCH)
@@ -83,7 +93,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: spring-cloud/spring-cloud-config
-          ref: v5.0.6
+          ref: ${{ format('v{0}', steps.extract-version.outputs.config) }}
           path: .spring-cloud-config-local
           persist-credentials: false
 
@@ -91,7 +101,7 @@ jobs:
         if: fromJson(env.APPLY_LOCAL_PATCH)
         working-directory: .spring-cloud-config-local
         run: |
-          git apply --ignore-whitespace ${GITHUB_WORKSPACE}/workaround/issue-2327/v5.0.6.patch
+          git apply --ignore-whitespace ${GITHUB_WORKSPACE}/workaround/issue-2327/v5.0.6.patch && git diff
 
       - name: Publish patched Spring Cloud Config to Maven Local
         if: fromJson(env.APPLY_LOCAL_PATCH)
